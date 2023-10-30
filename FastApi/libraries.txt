@@ -25,7 +25,7 @@ pip install shutil
 
 # Extract text from image
 pip install easyocr
-
+sudo apt-get install libreoffice
 
 
 

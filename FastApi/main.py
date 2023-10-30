@@ -204,6 +204,41 @@ async def download_pdf(image_to_pdf_file: str , file_name: str):
 
 # ======================= 2 - Docx to pdf Directories Start  =======================  
 
+# import subprocess
+
+# @app.post("/convert/doc/to/pdf/")
+# async def convert_to_pdf(files: list[UploadFile], background_tasks: BackgroundTasks = BackgroundTasks()):
+#     try:
+#         download_urls = []
+#         pdf_file_paths = []
+
+#         for file in files:
+#             file_name = re.sub(r'\s', '_', file.filename)
+#             docx_file_path = os.path.join(docx_to_pdf_original, file_name)
+#             with open(docx_file_path, "wb") as f:
+#                 f.write(file.file.read())
+
+#             pdf_file_path = f"{docx_file_path.replace('.docx', '.pdf')}"
+
+#             # Use unoconv to convert DOCX to PDF
+#             subprocess.run(["unoconv", "-f", "pdf", docx_file_path])
+
+#             pdf_file_paths.append(pdf_file_path)
+
+#             pdf_file_name = pdf_file_path.split('/')[-1]
+#             download_url = f"{server_url}/download/converted/pdf/{pdf_file_name}"
+#             download_urls.append(download_url)
+
+#         background_tasks.add_task(delete_pdf, pdf_file_paths)
+
+#         return {"message": "Files converted to PDF", "download_urls": download_urls}
+
+#     except Exception as e:
+#         background_tasks.add_task(delete_pdf, pdf_file_paths)
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @app.post("/convert/doc/to/pdf/")
 async def convert_to_pdf(files: list[UploadFile] , background_tasks: BackgroundTasks = BackgroundTasks()):
     # Create the PDF output directory if it doesn't exist
