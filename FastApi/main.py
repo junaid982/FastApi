@@ -24,10 +24,16 @@ from pdf2docx import Converter
 from rembg import remove
 import shutil
 import os
-
+import subprocess
 
 # text extraction from image
 import easyocr
+
+
+# text to audio
+from gtts import gTTS
+from pydub import AudioSegment
+import io
 
 app = FastAPI(root_path="/myapi")
 
@@ -204,41 +210,6 @@ async def download_pdf(image_to_pdf_file: str , file_name: str):
 
 # ======================= 2 - Docx to pdf Directories Start  =======================  
 
-# import subprocess
-
-# @app.post("/convert/doc/to/pdf/")
-# async def convert_to_pdf(files: list[UploadFile], background_tasks: BackgroundTasks = BackgroundTasks()):
-#     try:
-#         download_urls = []
-#         pdf_file_paths = []
-
-#         for file in files:
-#             file_name = re.sub(r'\s', '_', file.filename)
-#             docx_file_path = os.path.join(docx_to_pdf_original, file_name)
-#             with open(docx_file_path, "wb") as f:
-#                 f.write(file.file.read())
-
-#             pdf_file_path = f"{docx_file_path.replace('.docx', '.pdf')}"
-
-#             # Use unoconv to convert DOCX to PDF
-#             subprocess.run(["unoconv", "-f", "pdf", docx_file_path])
-
-#             pdf_file_paths.append(pdf_file_path)
-
-#             pdf_file_name = pdf_file_path.split('/')[-1]
-#             download_url = f"{server_url}/download/converted/pdf/{pdf_file_name}"
-#             download_urls.append(download_url)
-
-#         background_tasks.add_task(delete_pdf, pdf_file_paths)
-
-#         return {"message": "Files converted to PDF", "download_urls": download_urls}
-
-#     except Exception as e:
-#         background_tasks.add_task(delete_pdf, pdf_file_paths)
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
-
 @app.post("/convert/doc/to/pdf/")
 async def convert_to_pdf(files: list[UploadFile] , background_tasks: BackgroundTasks = BackgroundTasks()):
     # Create the PDF output directory if it doesn't exist
@@ -294,7 +265,7 @@ async def convert_to_pdf(files: list[UploadFile] , background_tasks: BackgroundT
         raise HTTPException(status_code=500, detail=str(e))
     
 
-    # return FileResponse(pdf_path, media_type="application/pdf", filename=pdf_filename)
+    return FileResponse(pdf_path, media_type="application/pdf", filename=pdf_filename)
 
 async def delete_doc_and_pdf(docx_file_paths , pdf_file_paths ):
     await asyncio.sleep(300)  # Wait for 500 seconds (5 minute)
@@ -586,10 +557,52 @@ async def upload_image_and_extract_text(image: UploadFile):
 
 
 
+# ======================= 7 - Text to audio Start =======================
 
 
-if __name__ == "__main__":
-    import uvicorn
+def modify_audio(audio, option):
+    if option == 1:  # drunk
+        audio = audio.speedup(playback_speed=0.7)
+    elif option == 2:  # Reverse
+        audio = audio.reverse()
+    # Add more options and modifications here...
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    return audio
+
+@app.post("/convert_text_to_audio/{option}")
+async def convert_text_to_audio(text: str, option: int):
+    if option < 1 or option > 18:
+        raise HTTPException(status_code=400, detail="Option out of range. Choose between 1-18")
+
+    # Convert text to speech using gTTS
+    tts = gTTS(text)
+    audio_io = io.BytesIO()
+    tts.write_to_fp(audio_io)
+    audio_io.seek(0)
+
+    # Convert gTTS audio to pydub AudioSegment
+    audio = AudioSegment.from_file(audio_io, format="mp3")
+
+    # Modify the audio based on the selected option
+    modified_audio = modify_audio(audio, option)
+
+    # Export the modified audio to a byte object
+    modified_audio_io = io.BytesIO()
+    modified_audio.export(modified_audio_io, format="mp3")
+    modified_audio_io.seek(0)
+
+    # Return the modified audio
+    return {"audio_data": modified_audio_io}
+
+
+
+# ======================= 7 - Text to audio End =======================
+
+
+
+
+# if __name__ == "__main__":
+#     import uvicorn
+
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
 
