@@ -11,6 +11,8 @@ from typing import List
 # import fitz  # PyMuPDF
 
 # doc to pdf 
+import weasyprint
+
 # from pydantic import BaseModel
 import os
 from fastapi.responses import FileResponse
@@ -24,16 +26,13 @@ from pdf2docx import Converter
 from rembg import remove
 import shutil
 import os
+
+import asyncio
 import subprocess
+
 
 # text extraction from image
 import easyocr
-
-
-# text to audio
-from gtts import gTTS
-from pydub import AudioSegment
-import io
 
 app = FastAPI(root_path="/myapi")
 
@@ -61,9 +60,17 @@ os.makedirs(image_to_pdf_file ,exist_ok=True )
 
 # os.makedirs('docx_to_pdf', exist_ok=True)
 
-# Create a directory to store uploaded images
-docx_to_pdf_original = 'docx_to_pdf_original'
+# # Create a directory to store uploaded images
+# docx_to_pdf_original = 'docx_to_pdf_original'
+# os.makedirs(docx_to_pdf_original, exist_ok=True)
+
+# Directory where uploaded .docx files will be stored temporarily
+docx_to_pdf_original = "docx_to_pdf_original"
 os.makedirs(docx_to_pdf_original, exist_ok=True)
+
+docx_to_pdf_output = "docx_to_pdf_output"
+os.makedirs(docx_to_pdf_output, exist_ok=True)
+
 
 # ======================= 2 - Docx to pdf Directories end =======================  
 
@@ -209,12 +216,117 @@ async def download_pdf(image_to_pdf_file: str , file_name: str):
 
 
 # ======================= 2 - Docx to pdf Directories Start  =======================  
+# ================== for windows System 
+
+# @app.post("/convert/doc/to/pdf/")
+# async def convert_to_pdf(files: list[UploadFile] , background_tasks: BackgroundTasks = BackgroundTasks()):
+#     # Create the PDF output directory if it doesn't exist
+#     try:
+
+#         download_urls = []
+#         docx_file_paths = []
+#         pdf_file_paths = []
+#         file_name = []
+
+#         for file in files:
+#             file_name = re.sub(r'\s', '_', file.filename)
+
+#             # Save the uploaded DOCX file to a temporary location
+#             docx_file_path = os.path.join( docx_to_pdf_original ,file_name )
+#             # docx_file_path = f"{pdf_output_dir}/{file_name}"
+
+#             with open(docx_file_path, "wb") as f:
+#                 f.write(file.file.read())
+
+#             print('docx_file_path :',docx_file_path)
+
+#             # Convert the DOCX to PDF using the docx2pdf library
+#             pdf_file_path = f"{docx_file_path.replace('.docx', '.pdf')}"
+            
+#             print('pdf_file_path :',pdf_file_path)
+
+#             # pdf_file_path = f"{pdf_output_dir}/{file_name.replace('.docx', '.pdf')}"
+#             convert(docx_file_path, pdf_file_path)
+
+#             # Construct the download URL for each processed file
+
+#             # Schedule a task to delete the image after 1 minute
+#             docx_file_paths.append(docx_file_path)
+#             pdf_file_paths.append(pdf_file_path)
+#             print('pdf_file_paths :',pdf_file_paths)
+
+#             pdf_file_name = pdf_file_path.split('\\')[-1]
+#             # print('pdf_file_path :',pdf_file_path)
+
+#             download_url = f"{server_url}/download/converted/pdf/{pdf_file_name}"
+#             download_urls.append(download_url)
+
+
+#         background_tasks.add_task(delete_doc_and_pdf, docx_file_paths , pdf_file_paths)
+
+#         return {"message": "Files converted to PDF", "download_urls": download_urls}
+    
+    
+#     except Exception as e:
+#         background_tasks.add_task(delete_doc_and_pdf, docx_file_paths , pdf_file_paths)
+
+#         raise HTTPException(status_code=500, detail=str(e))
+    
+
+#     # return FileResponse(pdf_path, media_type="application/pdf", filename=pdf_filename)
+
+
+# async def delete_doc_and_pdf(docx_file_paths , pdf_file_paths ):
+#     await asyncio.sleep(300)  # Wait for 500 seconds (5 minute)
+    
+#     for path in docx_file_paths:
+#         if os.path.exists(path):
+#                 print("file removed  :",path)
+#                 os.remove(path)
+
+#     for path in pdf_file_paths:
+#         if os.path.exists(path):
+#                 print("file removed  :",path)
+#                 os.remove(path)
+
+
+# @app.get("/download/converted/pdf/{pdf_file_name}")
+# async def download_image(pdf_file_name: str ):
+    
+#     pdf_path = os.path.join('docx_to_pdf_original', pdf_file_name)
+    
+#     if not os.path.exists(pdf_path):
+#         raise HTTPException(status_code=404, detail="Link Expired")
+
+#     response = FileResponse(pdf_path, headers={"Content-Disposition": f"attachment; filename={pdf_file_name}"})
+
+#     return response
+
+
+
+
+
+
+# =========================== for inux system
+
+
+
+def doc2pdf_linux(doc, output_pdf_path):
+    """
+    Convert a doc/docx document to pdf format (linux only, requires libreoffice).
+    :param doc: Path to document
+    :param output_pdf_path: Path to the output PDF file
+    """
+    cmd = ['libreoffice', '--convert-to', 'pdf', '--outdir', os.path.dirname(output_pdf_path), doc]
+    p = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    p.wait(timeout=10)
+    stdout, stderr = p.communicate()
+    if stderr:
+        raise subprocess.SubprocessError(stderr)
 
 @app.post("/convert/doc/to/pdf/")
-async def convert_to_pdf(files: list[UploadFile] , background_tasks: BackgroundTasks = BackgroundTasks()):
-    # Create the PDF output directory if it doesn't exist
+async def convert_doc_to_pdf(files: list[UploadFile], background_tasks: BackgroundTasks = BackgroundTasks()):
     try:
-
         download_urls = []
         docx_file_paths = []
         pdf_file_paths = []
@@ -222,76 +334,63 @@ async def convert_to_pdf(files: list[UploadFile] , background_tasks: BackgroundT
 
         for file in files:
             file_name = re.sub(r'\s', '_', file.filename)
+            doc_file_path = os.path.join(docx_to_pdf_original, file_name)
 
-            # Save the uploaded DOCX file to a temporary location
-            docx_file_path = os.path.join( docx_to_pdf_original ,file_name )
-            # docx_file_path = f"{pdf_output_dir}/{file_name}"
-
-            with open(docx_file_path, "wb") as f:
+            # Save the uploaded .docx file
+            with open(doc_file_path, "wb") as f:
                 f.write(file.file.read())
 
-            print('docx_file_path :',docx_file_path)
+            # Specify the output PDF file path
+            pdf_file_path = os.path.join(docx_to_pdf_output, file_name.replace(".docx", ".pdf"))
 
-            # Convert the DOCX to PDF using the docx2pdf library
-            pdf_file_path = f"{docx_file_path.replace('.docx', '.pdf')}"
+            # Convert .docx to .pdf using doc2pdf_linux
+            doc2pdf_linux(doc_file_path, pdf_file_path)
+
+            download_link = f"{server_url}/getpdf/{file_name.replace('.docx', '.pdf')}"
+            download_urls.append(download_link)
             
-            print('pdf_file_path :',pdf_file_path)
-
-            # pdf_file_path = f"{pdf_output_dir}/{file_name.replace('.docx', '.pdf')}"
-            convert(docx_file_path, pdf_file_path)
-
-            # Construct the download URL for each processed file
-
-            # Schedule a task to delete the image after 1 minute
-            docx_file_paths.append(docx_file_path)
+            docx_file_paths.append(doc_file_path)
             pdf_file_paths.append(pdf_file_path)
-            print('pdf_file_paths :',pdf_file_paths)
 
-            pdf_file_name = pdf_file_path.split('\\')[-1]
-            # print('pdf_file_path :',pdf_file_path)
+        print('docx_file_paths :',docx_file_paths)
+        print('pdf_file_paths :',pdf_file_paths)
 
-            download_url = f"{server_url}/download/converted/pdf/{pdf_file_name}"
-            download_urls.append(download_url)
+        background_tasks.add_task(delete_doc_and_pdf , docx_file_paths, pdf_file_paths)
 
-
-        background_tasks.add_task(delete_doc_and_pdf, docx_file_paths , pdf_file_paths)
-
-        return {"message": "Files converted to PDF", "download_urls": download_urls}
-    
-    
+        return {"message": "Link valid only for 5 min ." ,"download_links": download_urls}
     except Exception as e:
-        background_tasks.add_task(delete_doc_and_pdf, docx_file_paths , pdf_file_paths)
+        print("Error during conversion:", str(e))
+        raise HTTPException(status_code=500, detail="Conversion failed")
 
-        raise HTTPException(status_code=500, detail=str(e))
-    
 
-    return FileResponse(pdf_path, media_type="application/pdf", filename=pdf_filename)
 
-async def delete_doc_and_pdf(docx_file_paths , pdf_file_paths ):
-    await asyncio.sleep(300)  # Wait for 500 seconds (5 minute)
+
+async def delete_doc_and_pdf( docx_file_paths, pdf_file_paths):
+    await asyncio.sleep(30)  # Wait for 500 seconds (5 minute) 
     
     for path in docx_file_paths:
         if os.path.exists(path):
-                print("file removed  :",path)
+                print("doc file removed  :",path)
                 os.remove(path)
+
 
     for path in pdf_file_paths:
         if os.path.exists(path):
-                print("file removed  :",path)
+                print("pdf file removed  :",path)
                 os.remove(path)
 
 
-@app.get("/download/converted/pdf/{pdf_file_name}")
-async def download_image(pdf_file_name: str ):
-    
-    pdf_path = os.path.join('docx_to_pdf_original', pdf_file_name)
-    
-    if not os.path.exists(pdf_path):
-        raise HTTPException(status_code=404, detail="Link Expired")
+@app.get("/getpdf/{pdf_filename}")
+async def get_pdf(pdf_filename: str):
+    pdf_path = os.path.join(docx_to_pdf_output, pdf_filename)
+    if os.path.exists(pdf_path):
+        return FileResponse(pdf_path, headers={"Content-Disposition": f"attachment; filename={pdf_filename}"})
+    raise HTTPException(status_code=404, detail="File not found")
 
-    response = FileResponse(pdf_path, headers={"Content-Disposition": f"attachment; filename={pdf_file_name}"})
 
-    return response
+
+
+
 
 # ======================= 2 - Docx to pdf Directories End  =======================  
 
@@ -557,52 +656,10 @@ async def upload_image_and_extract_text(image: UploadFile):
 
 
 
-# ======================= 7 - Text to audio Start =======================
 
 
-def modify_audio(audio, option):
-    if option == 1:  # drunk
-        audio = audio.speedup(playback_speed=0.7)
-    elif option == 2:  # Reverse
-        audio = audio.reverse()
-    # Add more options and modifications here...
+if __name__ == "__main__":
+    import uvicorn
 
-    return audio
-
-@app.post("/convert_text_to_audio/{option}")
-async def convert_text_to_audio(text: str, option: int):
-    if option < 1 or option > 18:
-        raise HTTPException(status_code=400, detail="Option out of range. Choose between 1-18")
-
-    # Convert text to speech using gTTS
-    tts = gTTS(text)
-    audio_io = io.BytesIO()
-    tts.write_to_fp(audio_io)
-    audio_io.seek(0)
-
-    # Convert gTTS audio to pydub AudioSegment
-    audio = AudioSegment.from_file(audio_io, format="mp3")
-
-    # Modify the audio based on the selected option
-    modified_audio = modify_audio(audio, option)
-
-    # Export the modified audio to a byte object
-    modified_audio_io = io.BytesIO()
-    modified_audio.export(modified_audio_io, format="mp3")
-    modified_audio_io.seek(0)
-
-    # Return the modified audio
-    return {"audio_data": modified_audio_io}
-
-
-
-# ======================= 7 - Text to audio End =======================
-
-
-
-
-# if __name__ == "__main__":
-#     import uvicorn
-
-#     uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 

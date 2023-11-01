@@ -17,7 +17,6 @@ pip install pdf2docx
 
 # remove background 
 pip install rembg
-pip install shutil
 
 
 # replace background 
