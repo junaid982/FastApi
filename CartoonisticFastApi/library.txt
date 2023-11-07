@@ -7,7 +7,7 @@ pip install firebase_admin
 pip install torch
 pip install easyocr
  
-
+pip install opencv-contrib-python   # oil painting
 
 
 

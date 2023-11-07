@@ -11,8 +11,6 @@ import os
 
 import cv2
 import numpy as np
-import firebase_admin
-from firebase_admin import credentials, storage
 # from flask import Flask, request, jsonify
 import torch
 from model import WhiteBox
@@ -30,7 +28,7 @@ app = FastAPI(root_path="/myapi")
 
 server_url = "http://127.0.0.1:8000"
 
-# =================================== 6 - Blure Images Directory Start
+# =================================== Blure Images Directory Start
 
 # Create a directory to store uploaded images
 blur_image_original = 'blur_image_original'
@@ -39,11 +37,11 @@ os.makedirs(blur_image_original, exist_ok=True)
 blur_image_final = 'blur_image_final'
 os.makedirs(blur_image_final, exist_ok=True)
 
-# =================================== 6 - Blure Images Directory End
+# =================================== Blure Images Directory End
 
 
 
-# =================================== 7 - Sketch Images Directory Start
+# =================================== Sketch Images Directory Start
 
 # Define the directories to store original and sketch images
 original_image_dir = "sketch_image_original"
@@ -54,9 +52,9 @@ Path(original_image_dir).mkdir(parents=True, exist_ok=True)
 Path(final_image_dir).mkdir(parents=True, exist_ok=True)
 
 
-# =================================== 7 - Sketch Images Directory End
+# =================================== Sketch Images Directory End
 
-# =================================== 8 - Edge Images Directory Start
+# =================================== Edge Images Directory Start
 
 # Define the directories to store original and edge images
 edge_original = "edge_original"
@@ -66,10 +64,10 @@ edge_final = "edge_final"
 Path(edge_original).mkdir(parents=True, exist_ok=True)
 Path(edge_final).mkdir(parents=True, exist_ok=True)
 
-# =================================== 8 - Edge Images Directory End
+# =================================== Edge Images Directory End
 
 
-# =================================== 9 - Cartoon Images Directory Start
+# =================================== Cartoon Images Directory Start
 
 # Load the WhiteBox model and move it to GPU if available
 net = WhiteBox()
@@ -88,10 +86,10 @@ Path(cartoon_final_dir).mkdir(parents=True, exist_ok=True)
 
 
 
-# =================================== 9 - Cartoon Images Directory End
+# =================================== Cartoon Images Directory End
 
 
-# =================================== 10 -  Oil painting Images Directory Start
+# =================================== Oil painting control Images Directory Start
 
 
 # Define the directories to store original and oil painting images
@@ -105,8 +103,20 @@ oil_painting_final_dir = "oil_painting_final"
 Path(oil_painting_original_dir).mkdir(parents=True, exist_ok=True)
 Path(oil_painting_final_dir).mkdir(parents=True, exist_ok=True)
 
-# =================================== 10 -  Oil painting Images Directory End
+# =================================== Oil painting control Images Directory End
 
+
+#==================================== Oil Painting Image Directory Start
+
+# Define the directories to store original and oil painting images
+oil_painting_new_original_dir = "oil_painting_new_original"
+oil_painting_new_final_dir = "oil_painting_new_final"
+
+# Create the directories if they don't exist
+os.makedirs(oil_painting_new_original_dir, exist_ok=True)
+os.makedirs(oil_painting_new_final_dir, exist_ok=True)
+
+#==================================== Oil Painting Image Directory End
 
 
 
@@ -115,10 +125,6 @@ def read_root():
     # raise HTTPException(status_code=404, detail="File not found")
     # FileResponse(docx_path, headers={"Content-Disposition": f"attachment; filename={docx_file_name}"})
     return {"404": "Server not working!"}
-
-
-
-# ======================= 7 - Blur Image Start =======================
 
 
 @app.post("/api/effects/blur/")
@@ -197,11 +203,10 @@ async def delete_blur_path(original_image_paths , blurred_image_paths ):
             os.remove(blur_path)
 
 
-# ======================= 7 - Blur Image End =======================
     
 
 
-# ======================= 8 - Sketch Image Start =======================
+## =================================== Sketch Images  Start
 
 @app.post("/api/effects/sketch/")
 async def img_to_sketch(images: List[UploadFile] = File(...) ,background_tasks: BackgroundTasks = BackgroundTasks()):
@@ -305,11 +310,11 @@ async def delete_sketch_path(original_image_paths , sketch_image_paths ):
 
 
 
-# ======================= 8 - Blur Image End =======================
+## =================================== Stech Images  End
 
 
 
-# ======================= 9 - Edge Image Start =======================
+# =================================== Edge Images Start
 
 
 @app.post("/api/effects/edge/")
@@ -409,12 +414,12 @@ async def delete_edge_path(edge_original_paths , edge_image_paths):
 
 
 
-# ======================= 9 - Edge Image End =======================
+
+# =================================== Edge Images End
 
 
 
-
-# ======================= 10 - Cartoon Image Start =======================
+# =================================== Cartoon Images Start
 
 @app.post("/api/effects/cartoon/")
 async def img_to_cartoon(images: List[UploadFile] = File(...) ,background_tasks: BackgroundTasks = BackgroundTasks()):
@@ -519,11 +524,13 @@ async def delete_cartoon_path(cartoon_original_paths , cartoon_image_paths ):
             os.remove(cartoon_path)
 
 
-# ======================= 10 - Cartoon Image End =======================
+# =================================== Cartoon Images ENd
 
 
 
-# ======================= 10 - Oil Painting Control Image Start =======================
+# =================================== Oil painting Images  Start
+
+
 
 
 def oil_painting_effect(image, radius, intensity):
@@ -592,8 +599,8 @@ async def download_image( image_name: str):
 async def delete_oil_painting_control_path(oil_painting_original_path , oil_painting_final_path ):
     await asyncio.sleep(300)  # Wait for 500 seconds (5 minute)
 
-    # print('oil_painting_original_path :',oil_painting_original_path)
-    # print('oil_painting_final_path :',oil_painting_final_path)
+    print('oil_painting_original_path :',oil_painting_original_path)
+    print('oil_painting_final_path :',oil_painting_final_path)
 
     if os.path.exists(oil_painting_original_path):
         os.remove(oil_painting_original_path)
@@ -605,7 +612,86 @@ async def delete_oil_painting_control_path(oil_painting_original_path , oil_pain
 
 
 
-# ======================= 10 - Oil Painting Control Image Start =======================
+
+
+
+# =================================== Oil painting Images End
+
+def oil_painting_effect(image, radius, intensity):
+    output = cv2.xphoto.oilPainting(image, radius, intensity)
+    return output
+
+
+@app.post("/api/effects/oil-paint/")
+async def img_to_oil_paint(image: UploadFile = File(...),radius: int = Form(...),intensity: int = Form(...) ,background_tasks: BackgroundTasks = BackgroundTasks()):
+    if not image:
+        return JSONResponse(content={'message': 'image is a required field'}, status_code=400)
+
+    # Use the filename as the UID
+    uid = image.filename
+
+    # Read Image
+    file_bytes = np.fromstring(await image.read(), np.uint8)
+    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+
+    # Apply the oil painting effect
+    output = oil_painting_effect(img, radius, intensity)
+
+    # Save the original and oil painting images to directories
+    oil_painting_new_original_path = f"{oil_painting_new_original_dir}/{uid}"
+    oil_painting_new_final_path = f"{oil_painting_new_final_dir}/{uid}"
+
+    with open(oil_painting_new_original_path, 'wb') as original_image_file:
+        original_image_file.write(file_bytes)
+
+    cv2.imwrite(oil_painting_new_final_path, output)
+
+    download_url = f"{server_url}/download/oil-paint/{uid}"
+
+    background_tasks.add_task(delete_oil_painting_control_path, oil_painting_new_original_path , oil_painting_new_final_path )
+
+
+
+    # Return the local file path for the oil painting image
+    return JSONResponse(content={"message":"Download link availabel only for 5 min.",'image_url': download_url})
+
+
+
+
+@app.get("/download/oil-paint/{image_name}")
+async def download_image( image_name: str):
+
+    # try:
+
+        # Define the path to the blurred image.
+        oil_painting_control_path = f"{oil_painting_new_final_dir}/{image_name}"
+
+        print('oil_painting_control_path :',oil_painting_control_path)
+        if not os.path.exists(oil_painting_control_path):
+
+            raise HTTPException(status_code=404, detail="Link Expired")
+        
+        # Return the blurred image as a downloadable response.
+        return FileResponse(oil_painting_control_path)
+    # except:
+    #     return JSONResponse(content={'message': 'Error while downloading maybe Link Expired'}, status_code=400)
+
+
+async def delete_oil_painting_control_path(oil_painting_new_original_path , oil_painting_new_final_path ):
+    await asyncio.sleep(300)  # Wait for 500 seconds (5 minute)
+
+    # print('oil_painting_original_path :',oil_painting_new_original_path)
+    # print('oil_painting_final_path :',oil_painting_new_final_path)
+
+    if os.path.exists(oil_painting_new_original_path):
+        os.remove(oil_painting_new_original_path)
+
+
+    if os.path.exists(oil_painting_new_final_path):
+        os.remove(oil_painting_new_final_path)
+
+
+
 
 
 
