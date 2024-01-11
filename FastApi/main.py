@@ -180,7 +180,7 @@ async def convert_to_pdf(images: List[UploadFile] = File(...) ,background_tasks:
     for image_path in resized_image_paths:
             os.remove(image_path)
 
-    background_tasks.add_task(delete_pdf_path, pdf_path )
+    # background_tasks.add_task(delete_pdf_path, pdf_path )
 
     
     download_urls = f"{server_url}/download/pdf/{image_to_pdf_file}/{file_name}"
@@ -201,7 +201,6 @@ async def delete_pdf_path(pdf_file_path ):
 async def download_pdf(image_to_pdf_file: str , file_name: str):
 
     pdf_path = os.path.join(image_to_pdf_file ,file_name )
-    # pdf_path = f"{image_to_pdf_file}/{file_name}"
     if not os.path.exists(pdf_path):
 
         raise HTTPException(status_code=404, detail="Link Expired")

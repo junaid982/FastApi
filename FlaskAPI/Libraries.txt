@@ -4,3 +4,4 @@ run flask code
 
 pip install flask
 pip install Pillow
+pip install img2pdf

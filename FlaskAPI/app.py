@@ -1,7 +1,10 @@
-from flask import Flask,jsonify,request
+from flask import Flask,jsonify,request,send_file
 from werkzeug.utils import secure_filename
-
+from PIL import Image
 import os 
+import img2pdf
+import asyncio
+import threading
 
 
 app = Flask(__name__)
@@ -34,7 +37,7 @@ os.makedirs(image_to_pdf_file, exist_ok=True)
 def convert_to_pdf():
     try:
         uploaded_image_paths = []
-        resized_image_path = []
+        resized_image_paths = []
         file_name = ''
 
         images = request.files.getlist("images")
@@ -48,17 +51,63 @@ def convert_to_pdf():
             image.save(original_image_path)
 
 
+            # Open the uploaded image using Pillow
+            with Image.open(original_image_path) as img:
+                 # Resize the image to the desired dimensions with the BILINEAR filter
+                img = img.resize((desired_width, desired_height), Image.BILINEAR)
             
+                # Save the resized image to the resized directory
+                img.save(resized_image_path)
+
+            uploaded_image_paths.append(original_image_path)
+            resized_image_paths.append(resized_image_path)
+
+        pdf_bytes = img2pdf.convert(resized_image_paths)
+        file_name = file_name + ".pdf"
+
+        pdf_path = os.path.join(image_to_pdf_file, file_name)
+
+        with open(pdf_path, "wb") as pdf_file:
+            pdf_file.write(pdf_bytes)
+
+        for image_path in uploaded_image_paths:
+            os.remove(image_path)
+
+        for image_path in resized_image_paths:
+            os.remove(image_path)
+
+        delete_pdf_path(pdf_path)
+
+        download_url = f"{server_url}/download/pdf/{file_name}"
 
 
+        link =  {
+            "message": "Link valid only for 5 min.",
+            "Download url": download_url
+        }
         
-        return jsonify("images[0]"),200
+        return jsonify(link),200
     
     except Exception as e:
         return jsonify(str(e)),500
 
+def delete_pdf_path(pdf_file_path):
+    print("Delete running")
+    threading.Timer(60, os.remove, args=[pdf_file_path]).start()
+    
+
+@app.route("/download/pdf/<file_name>")
+def download_pdf(file_name):
+    pdf_path = os.path.join(image_to_pdf_file, file_name)
+
+    if not os.path.exists(pdf_path):
+        app.logger.error(f"File not found: {pdf_path}")
+        return "Link Expired", 404
+    
+    return send_file(pdf_path, as_attachment=True, download_name=file_name)
+
 if __name__ == "__main__":
-    app.run(host='0.0.0.0' , port=5000 , debug=True)
+    app.run(host='0.0.0.0' , port=5000 , debug=True , use_reloader=False)
 
 
 
