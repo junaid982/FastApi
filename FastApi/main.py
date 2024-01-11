@@ -180,7 +180,7 @@ async def convert_to_pdf(images: List[UploadFile] = File(...) ,background_tasks:
     for image_path in resized_image_paths:
             os.remove(image_path)
 
-    # background_tasks.add_task(delete_pdf_path, pdf_path )
+    background_tasks.add_task(delete_pdf_path, pdf_path )
 
     
     download_urls = f"{server_url}/download/pdf/{image_to_pdf_file}/{file_name}"
