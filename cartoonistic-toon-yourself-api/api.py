@@ -93,7 +93,7 @@ def img_to_sketch():
 @app.route("/effects/oilPaint", methods=["POST"])
 def img_to_oil_paint():
     uid = request.values.get('uid', None) 
-    file = request.files.get('image', None)
+    file = request.files.get('images', None)
 
     if(uid == None or file == None):
         return jsonify({'message' : 'uid & image are required field'})
@@ -108,6 +108,7 @@ def img_to_oil_paint():
     output = cv2.xphoto.oilPainting(img, 7, 9)
 
     _, buffer = cv2.imencode('.jpg', output)
+    
     blob = bucket.blob(f'temp_images/{uid}.jpg')
     blob.upload_from_string(buffer.tobytes(), content_type='image/jpeg')
 

@@ -10,4 +10,7 @@
 >>> pip install flask
 >>> pip install Pillow
 >>> pip install numpy
->>> pip install opencv-python
+
+
+# Oil Painting
+>>> pip install opencv-contrib-python
