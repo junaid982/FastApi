@@ -1,19 +1,23 @@
 from flask import Flask , request , jsonify , send_file
 from werkzeug.utils import secure_filename
+import socket
 from PIL import Image
 import numpy as np
 import cv2
 import os 
 import time
 import threading
-import schedule # execute after some time 
 
 
 
 app  = Flask(__name__)
 
+hostname = socket.gethostname()
+IPAddr = socket.gethostbyname(hostname)
 
-server_url = "http://192.168.1.46:5000"
+
+# server_url = f"http:192.68.1.46:5000"
+server_url = f"{IPAddr}:5000"
 
 # Directories
 
@@ -30,6 +34,7 @@ os.makedirs(sketch_final_image_dir, exist_ok=True)
 
 
 # ================ 1 - Image to Sketch Program Start =================
+
 def delete_Sketch_path(sketch_images):
     print("Delete running")
     for image in sketch_images:
@@ -46,13 +51,12 @@ def sketch_images():
         
         images = request.files.getlist("images")
         
-        uploaded_images = []
         sketch_images = []
-        download_images = []
-        
+    
         file_names = []
         
         k_size = 101
+        
         
         if not images:
             return {"error": "Provided image to convert to sketch."}, 400
@@ -62,7 +66,6 @@ def sketch_images():
             
         
         for image in images:
-            original_image = os.path.join(sketch_original_image_dir , secure_filename(image.filename))
             
             # Use the filename as the UID
             uid = image.filename
@@ -86,7 +89,7 @@ def sketch_images():
             invblur_img = cv2.bitwise_not(blur_img)
             
             # Sketch Image
-            sketch_img = cv2.divide(grey_img, invblur_img, scale=256.0)
+            sketch_img = cv2.divide(grey_img, invblur_img, scale=230.0)
             
             # Encode the sketch image to JPG
             _, buffer = cv2.imencode('.jpg', sketch_img)
@@ -110,7 +113,7 @@ def sketch_images():
         for file_name in file_names:
             links.append(f"{server_url}/api/download/sketch/images/{file_name}" ) 
         
-        threading.Timer(30, delete_Sketch_path, args=(sketch_images,)).start()
+        threading.Timer(120, delete_Sketch_path, args=(sketch_images,)).start()
 
         
         return jsonify({"download_link":links}),200    
@@ -120,9 +123,10 @@ def sketch_images():
         return jsonify({"error":str(e)}),500
     
         
-@app.route("/api/download/sketch/images/<file_name>")    
+@app.route("/api/download/sketch/images/<file_name>" , methods=["GET"])    
 def download_sketch_images(file_name):
     try:
+        print("file_name :",file_name)
         sketch_path = os.path.join(sketch_final_image_dir, file_name)
         if os.path.exists(sketch_path):
             return send_file(sketch_path, as_attachment=True, download_name=file_name)
@@ -139,6 +143,4 @@ def download_sketch_images(file_name):
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0' , port=5000 , debug=True , use_reloader=False)
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    
