@@ -334,6 +334,7 @@ def img_to_edge2():
     # Read Image
     file_bytes = np.fromfile(file, np.uint8)
     img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+    
     # img_grey = cv2.cvtColor(img , cv2.COLOR_RGB2GRAY)
     img_blur = cv2.medianBlur(img,11)
     output = cv2.bilateralFilter(img_blur,15,75,75)

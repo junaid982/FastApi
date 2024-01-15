@@ -14,6 +14,10 @@ import cv2
 import torch
 from cartoon_module.model import WhiteBox
 
+# Image background 
+from rembg import remove
+
+
 from PIL import Image
 import time
 
@@ -67,6 +71,24 @@ os.makedirs(edgeImage_final_image_dir, exist_ok=True)
 
 # ================ 4 - Edge Image Folder Start =================
 
+# ================ 5 - Effect Maker Folder Start =================
+
+effect_maker_final_image_dir =  "5_Effect_Maker/1_Final_Images"
+os.makedirs(effect_maker_final_image_dir, exist_ok=True)
+
+# ================ 5 - Effect Maker Folder Start =================
+
+# ================ 6 - Remove Image Background Folder Start =================
+
+remove_bg_original_image_dir =  "6_Remove_Image_background/1_Original_Images"
+remove_bg_final_image_dir =  "6_Remove_Image_background/2_Final_Images"
+
+os.makedirs(remove_bg_original_image_dir, exist_ok=True)
+os.makedirs(remove_bg_final_image_dir, exist_ok=True)
+
+# ================ 6 - Remove Image Background Folder Start =================
+
+
 
 #======================================= Directories End Here =======================================
 
@@ -82,10 +104,7 @@ def delete_Sketch_path(sketch_images):
     for image in sketch_images:
         if os.path.exists(image):
             os.remove(image)
-            # print(f"Deleted: {image}")
-        else:
-            # print(f"File not found: {image}")
-            pass
+           
 
 
 @app.route("/api/effects/sketch/",methods=["POST"])
@@ -190,14 +209,9 @@ def delete_OilPaint_path(oilPaint_images):
     
     print("Delete delete_OilPaint_path running")
     for image in oilPaint_images:
-        # print("image",image)
         if os.path.exists(image):
             os.remove(image)
-            print(f"Deleted: {image}")
-        else:
-            pass
-            # print(f"File not found: {image}")
-                
+            
 
 
 @app.route("/api/effects/oil-paint/", methods=["POST"])
@@ -293,10 +307,7 @@ def delete_Cartoon_path(cartoon_images):
     for image in cartoon_images:
         if os.path.exists(image):
             os.remove(image)
-            # print(f"Deleted: {image}")
-        else:
-            # print(f"File not found: {image}")
-            pass
+            
 
 
 @app.route("/api/effects/cartoon/", methods=["POST"])
@@ -396,11 +407,7 @@ def delete_EdgeImage_path(edge_images):
     for image in edge_images:
         if os.path.exists(image):
             os.remove(image)
-            # print(f"Deleted: {image}")
-        else:
-            # print(f"File not found: {image}")
-            pass
-
+            
 
 @app.route('/api/effects/edge/' , methods=["POST"])
 def edge_image():
@@ -472,6 +479,176 @@ def download_edge_images(file_name):
 
 # ================ 4 -  Edge Image Program End Here =================
 
+
+# ================ 5 -  Effetcs Image Program Start From Here  =================
+
+def delete_Effects_image_path(effect_maker_images):
+    print("Delete delete_Effects_image_path running")
+    for image in effect_maker_images:
+        if os.path.exists(image):
+            os.remove(image)
+            
+    
+
+@app.route('/api/effects/marker/' , methods=["POST"])
+def effects_maker():
+    try:
+        images = request.files.getlist("images")
+        effect_maker_images = []
+        file_names = []
+        
+        if not images:
+            return {"error": "Provided image to convert to oil paint."}, 400
+        
+        if len(images) > 5:
+            return {"error": "Upload max 5 images."}, 400
+        
+        for image in images:
+            uid = image.filename
+
+            file_names.append(uid)
+            
+             # Read Image
+            file_bytes = np.fromfile(image, np.uint8)
+            img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+
+            img_style = cv2.stylization(img , sigma_s=150 , sigma_r=0.25)
+            
+            _, buffer = cv2.imencode('.jpg', img_style)
+            
+            effects_maker_final_path = os.path.join(effect_maker_final_image_dir , uid)
+            effect_maker_images.append(effects_maker_final_path)
+            
+            # Store converted Images
+            with open(effects_maker_final_path , 'wb') as effect_maker_file:
+                effect_maker_file.write(buffer.tobytes()) 
+                
+            
+        links = []
+        for file_name in file_names:
+            links.append(f"{server_url}/api/download/effects/image/maker/{file_name}" ) 
+        
+        threading.Timer(delete_path_timer, delete_Effects_image_path, args=(effect_maker_images,)).start()
+
+        return jsonify({"message":"Download Link Available only for 10 minuts","image_url":links}),200  
+
+    except  Exception as e:
+        return jsonify({"error":str(e)}),500
+    
+    
+ 
+@app.route("/api/download/effects/image/maker/<file_name>" , methods=["GET"])    
+def download_effects_maker_images(file_name):
+    try:
+        # print("file_name :",file_name)
+        effects_path = os.path.join(effect_maker_final_image_dir, file_name)
+        if os.path.exists(effects_path):
+            return send_file(effects_path , as_attachment=True, download_name=file_name)
+        
+        else:
+            return jsonify({"error":"Image not Found"}),404
+    
+    except  Exception as e:
+        return jsonify({"error":str(e)}),500
+
+# ================ 5 -  Effects Image Program End Here =================
+
+
+# ================ 6 -  Remove Image Background Program Start From Here  =================
+
+def delete_RmBg_path(output_path):
+    print("Delete delete_RmBg_path running")
+    for image in output_path:
+        if os.path.exists(image):
+            os.remove(image)
+
+              
+
+
+def remove_bg_func(input_image_path, output_image_path, th=None):
+    # print('th:', th)
+    with open(input_image_path, 'rb') as f:
+        input_data = f.read()
+
+        if th:
+            subject = remove(input_data, alpha_matting=True, alpha_matting_foreground_threshold=th)
+        else:
+            subject = remove(input_data)
+
+    with open(output_image_path, 'wb') as f:
+        f.write(subject)
+
+@app.route('/api/effects/remove/image/background/' , methods=['POST'])
+def remove_background():
+    try:
+        images = request.files.getlist("images")
+        th = request.form.get("threshold", None )
+        if th:
+            th=int(th)
+            
+        rmbg_original_images = []
+        rmbg_final_images = []
+        file_names = []
+        
+        if not images:
+            return {"error": "Provided image to convert to oil paint."}, 400
+        
+        if len(images) > 5:
+                return {"error": "Upload max 5 images."}, 400
+            
+        for image in images:
+            uid = image.filename
+            file_names.append(uid)
+            
+            # react uploaded images in bytes 
+            file_bytes = np.frombuffer(image.read(), np.uint8)
+            
+            # create path store in str 
+            upload_path = os.path.join(remove_bg_original_image_dir, uid)
+            output_path = os.path.join(remove_bg_final_image_dir, uid)
+            
+            # store uploaded image str in List 
+            rmbg_original_images.append(upload_path)
+            rmbg_final_images.append(output_path)
+            # Store Uploaded Image into a Upload Original Folder 
+            with open(upload_path, 'wb') as uploaded_file:
+                uploaded_file.write(file_bytes)
+            
+            # call function to remove background
+            remove_bg_func(input_image_path = upload_path, output_image_path=output_path, th=th)
+            
+            # Delete original Image 
+            os.remove(upload_path)
+            
+        links = []
+        for file_name in file_names:
+            links.append(f"{server_url}/api/download/remove/bg/images/{file_name}" ) 
+        
+        threading.Timer(delete_path_timer, delete_RmBg_path, args=(rmbg_final_images,)).start()
+        
+        return jsonify({"message":"Download Link Available only for 10 minuts","download_link":links}),200 
+
+    
+    except  Exception as e:
+        return jsonify({"error":str(e)}),500
+
+
+@app.route("/api/download/remove/bg/images/<file_name>" , methods=["GET"])    
+def download_rmbg_images(file_name):
+    try:
+        # print("file_name :",file_name)
+        rmbg_path = os.path.join(remove_bg_final_image_dir, file_name)
+        if os.path.exists(rmbg_path):
+            return send_file(rmbg_path, as_attachment=True, download_name=file_name)
+        
+        else:
+            return jsonify({"error":"Image not Found"}),404
+    
+    except  Exception as e:
+        return jsonify({"error":str(e)}),500
+
+
+# ================ 6 -  Remove Image Background Program End Here  =================
 
 
 # ======================================= Program End Here ======================================= 
