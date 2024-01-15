@@ -14,3 +14,9 @@
 
 # Oil Painting
 >>> pip install opencv-contrib-python
+
+
+# Cartoon Image
+>>> pip install torch
+
+
