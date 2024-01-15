@@ -58,7 +58,14 @@ os.makedirs(oilpaint_final_image_dir, exist_ok=True)
 cartoon_final_image_dir =  "3_Cartoon_Images/1_Final_Images"
 os.makedirs(cartoon_final_image_dir, exist_ok=True)
 
-# ================ 3 - Image to Cartoon Folder ENd =================
+# ================ 3 - Image to Cartoon Folder End =================
+
+# ================ 4 - Edge Image Folder Start =================
+
+edgeImage_final_image_dir =  "4_Edge_Images/1_Final_Images"
+os.makedirs(edgeImage_final_image_dir, exist_ok=True)
+
+# ================ 4 - Edge Image Folder Start =================
 
 
 #======================================= Directories End Here =======================================
@@ -179,10 +186,10 @@ def download_sketch_images(file_name):
 
 # ================ 2 -  Image to OilPainting Program Start From Here  =================
 
-def delete_OilPaint_path(sketch_images):
-    time.sleep(delete_path_timer)
+def delete_OilPaint_path(oilPaint_images):
+    
     print("Delete delete_OilPaint_path running")
-    for image in sketch_images:
+    for image in oilPaint_images:
         # print("image",image)
         if os.path.exists(image):
             os.remove(image)
@@ -281,9 +288,9 @@ if torch.cuda.is_available():
     net.cuda()    
 
 
-def delete_Cartoon_path(sketch_images):
+def delete_Cartoon_path(cartoon_images):
     print("Delete delete_Cartoon_path running")
-    for image in sketch_images:
+    for image in cartoon_images:
         if os.path.exists(image):
             os.remove(image)
             # print(f"Deleted: {image}")
@@ -378,12 +385,92 @@ def download_Cartoon_path(file_name):
     except  Exception as e:
         return jsonify({"error":str(e)}),500
 
-
-
-
-
-
 # ================ 3 -  Image to Cartoon Program End Here =================
+
+
+# ================ 4 -  Edge Image Program Start From Here  =================
+
+
+def delete_EdgeImage_path(edge_images):
+    print("Delete delete_EdgeImage_path running")
+    for image in edge_images:
+        if os.path.exists(image):
+            os.remove(image)
+            # print(f"Deleted: {image}")
+        else:
+            # print(f"File not found: {image}")
+            pass
+
+
+@app.route('/api/effects/edge/' , methods=["POST"])
+def edge_image():
+    try:
+        images = request.files.getlist("images")
+        edge_images = []
+        file_names = []
+        
+        if not images:
+            return {"error": "Provided image to convert to oil paint."}, 400
+        
+        if len(images) > 5:
+            return {"error": "Upload max 5 images."}, 400
+        
+        for image in images:
+            uid = image.filename
+
+            file_names.append(uid)
+            
+            # Read Image
+            file_bytes = np.fromfile(image, np.uint8)
+            img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+
+            img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            
+            # Blur the image for better edge detection
+            img_blur = cv2.GaussianBlur(img_gray, (3,3), 0) 
+            
+            # Canny Edge Detection
+            edges = cv2.Canny(image=img_blur, threshold1=60, threshold2=100) 
+
+            _, buffer = cv2.imencode('.jpg', edges)
+            
+            edgeimage_final_path = os.path.join(edgeImage_final_image_dir , uid)
+            edge_images.append(edgeimage_final_path)
+            
+            # Store converted Images
+            with open(edgeimage_final_path , 'wb') as edge_image_file:
+                edge_image_file.write(buffer.tobytes()) 
+                
+        links = []
+        for file_name in file_names:
+            links.append(f"{server_url}/api/download/edge/image/{file_name}" ) 
+        
+        
+        threading.Timer(delete_path_timer, delete_EdgeImage_path, args=(edge_images,)).start()
+        
+        
+        return jsonify({"message":"Download Link Available only for 10 minuts","image_url":links}),200  
+        
+    except  Exception as e:
+        return jsonify({"error":str(e)}),500
+    
+    
+@app.route("/api/download/edge/image/<file_name>" , methods=["GET"])    
+def download_edge_images(file_name):
+    try:
+        # print("file_name :",file_name)
+        oilpaint_path = os.path.join(edgeImage_final_image_dir, file_name)
+        if os.path.exists(oilpaint_path):
+            return send_file(oilpaint_path, as_attachment=True, download_name=file_name)
+        
+        else:
+            return jsonify({"error":"Image not Found"}),404
+    
+    except  Exception as e:
+        return jsonify({"error":str(e)}),500
+
+
+# ================ 4 -  Edge Image Program End Here =================
 
 
 
