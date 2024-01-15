@@ -2,7 +2,7 @@ from flask import Flask , request , jsonify , send_file
 from werkzeug.utils import secure_filename
 import os 
 import socket
-import threading
+import threading  
 
 import asyncio
 
@@ -24,7 +24,7 @@ app  = Flask(__name__)
 hostname = socket.gethostname()
 IPAddr = socket.gethostbyname(hostname)
 
-delete_path_timer = 30 
+delete_path_timer = 20 
 
 # server_url = f"http:192.68.1.46:5000"
 server_url = f"{IPAddr}:5000"
@@ -71,15 +71,14 @@ os.makedirs(cartoon_final_image_dir, exist_ok=True)
 # ================ 1 - Image to Sketch Program Start =================
 
 def delete_Sketch_path(sketch_images):
-    with app.app_context():
-        # print("Delete running")
-        for image in sketch_images:
-            if os.path.exists(image):
-                os.remove(image)
-                # print(f"Deleted: {image}")
-            else:
-                # print(f"File not found: {image}")
-                pass
+    print("Delete delete_Sketch_path running")
+    for image in sketch_images:
+        if os.path.exists(image):
+            os.remove(image)
+            # print(f"Deleted: {image}")
+        else:
+            # print(f"File not found: {image}")
+            pass
 
 
 @app.route("/api/effects/sketch/",methods=["POST"])
@@ -126,7 +125,7 @@ def sketch_images():
             invblur_img = cv2.bitwise_not(blur_img)
             
             # Sketch Image
-            sketch_img = cv2.divide(grey_img, invblur_img, scale=230.0)
+            sketch_img = cv2.divide(grey_img, invblur_img, scale=256.0)
             
             # Encode the sketch image to JPG
             _, buffer = cv2.imencode('.jpg', sketch_img)
@@ -152,6 +151,8 @@ def sketch_images():
         
         threading.Timer(delete_path_timer, delete_Sketch_path, args=(sketch_images,)).start()
     
+        # download_sketch_images(sketch_images)
+        
         return jsonify({"message":"Download Link Available only for 10 minuts","download_link":links}),200  
     
     
@@ -179,16 +180,16 @@ def download_sketch_images(file_name):
 # ================ 2 -  Image to OilPainting Program Start From Here  =================
 
 def delete_OilPaint_path(sketch_images):
-    with app.app_context():
-        # print("Delete running")
-        for image in sketch_images:
-            # print("image",image)
-            if os.path.exists(image):
-                os.remove(image)
-                print(f"Deleted: {image}")
-            else:
-                pass
-                # print(f"File not found: {image}")
+    time.sleep(delete_path_timer)
+    print("Delete delete_OilPaint_path running")
+    for image in sketch_images:
+        # print("image",image)
+        if os.path.exists(image):
+            os.remove(image)
+            print(f"Deleted: {image}")
+        else:
+            pass
+            # print(f"File not found: {image}")
                 
 
 
@@ -242,9 +243,8 @@ def oilpainting_image():
         for file_name in file_names:
             links.append(f"{server_url}/api/download/oil/paint/image/{file_name}" ) 
         
+        threading.Timer(delete_path_timer, delete_OilPaint_path, args=(oilpainting_images,)).start()
         
-        threading.Timer(delete_path_timer , download_oilpainting_images, args=(oilpainting_images,)).start()
-
         return jsonify({"message":"Download Link Available only for 10 minuts","download_link":links}),200  
 
     except  Exception as e:
@@ -280,16 +280,16 @@ net.eval()
 if torch.cuda.is_available():
     net.cuda()    
 
+
 def delete_Cartoon_path(sketch_images):
-    with app.app_context():
-        # print("Delete running")
-        for image in sketch_images:
-            if os.path.exists(image):
-                os.remove(image)
-                # print(f"Deleted: {image}")
-            else:
-                # print(f"File not found: {image}")
-                pass
+    print("Delete delete_Cartoon_path running")
+    for image in sketch_images:
+        if os.path.exists(image):
+            os.remove(image)
+            # print(f"Deleted: {image}")
+        else:
+            # print(f"File not found: {image}")
+            pass
 
 
 @app.route("/api/effects/cartoon/", methods=["POST"])
@@ -357,7 +357,7 @@ def cartoon_image():
             links.append(f"{server_url}/api/download/cartoon/image/{file_name}" ) 
 
         threading.Timer(delete_path_timer , delete_Cartoon_path, args=(cartoon_images,)).start()
-
+        
         return jsonify({"message":"Download Link Available only for 10 minuts","image_url":links}),200  
 
     except  Exception as e:
@@ -365,7 +365,7 @@ def cartoon_image():
 
 
 @app.route("/api/download/cartoon/image/<file_name>" , methods=["GET"])    
-def delete_Cartoon_path(file_name):
+def download_Cartoon_path(file_name):
     try:
         # print("file_name :",file_name)
         cartoon_path = os.path.join(cartoon_final_image_dir, file_name)
@@ -383,7 +383,7 @@ def delete_Cartoon_path(file_name):
 
 
 
-# ================ 2 -  Image to Cartoon Program End Here =================
+# ================ 3 -  Image to Cartoon Program End Here =================
 
 
 

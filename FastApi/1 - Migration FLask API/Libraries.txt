@@ -16,7 +16,7 @@
 >>> pip install opencv-contrib-python
 
 
-# Cartoon Image
+# Cartoon Image torch support python 3.11
 >>> pip install torch
 
 
