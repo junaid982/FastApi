@@ -20,3 +20,8 @@
 >>> pip install torch
 
 
+# Remove Background 
+>>> pip install rmbg
+
+# Extract Text From Image
+>>> pip install easyocr

@@ -17,6 +17,10 @@ from cartoon_module.model import WhiteBox
 # Image background 
 from rembg import remove
 
+# text extraction from image
+import easyocr
+
+
 
 from PIL import Image
 import time
@@ -649,6 +653,46 @@ def download_rmbg_images(file_name):
 
 
 # ================ 6 -  Remove Image Background Program End Here  =================
+
+# ================ 7 -  Extract Text From Program Start From Here  =================
+
+reader = easyocr.Reader(['en'])
+@app.route('/api/extract/text/from/image/' , methods = ['POST'])
+def extract_text():
+    try:
+        
+        images = request.files.getlist("images")
+        extracted_text = {}
+        file_names = []
+        
+        if not images:
+            return {"error": "Provided image to convert to oil paint."}, 400
+            
+        if len(images) > 5:
+            return {"error": "Upload max 5 images."}, 400
+            
+        for image in images:
+            uid = image.filename
+            file_names.append(uid)
+            
+            image_data = image.read()
+            
+            results = reader.readtext(image_data)
+            
+            # Store the file name with extracted text in key value pair
+            format_extracted_text = " ".join(result[1] for result in results)
+            
+            extracted_text[uid] = format_extracted_text
+            
+            
+        print(extracted_text)
+        return jsonify(extracted_text),200
+    
+    except Exception as e:
+        return jsonify({"error":str(e)}),500
+
+# ================ 7 -  Extract Text From Program End Here  =================
+
 
 
 # ======================================= Program End Here ======================================= 
