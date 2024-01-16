@@ -1,0 +1,15 @@
+Notes:
+
+Object removal 
+Lama 
+https://www.youtube.com/watch?v=7zO8oIP0sOo
+
+
+https://github.com/enesmsahin/simple-lama-inpainting
+
+
+https://github.com/patugosavi/LamaCleaner
+
+
+with flask
+https://github.com/Russellwzr/image-inpainting-be
