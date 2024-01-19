@@ -1,0 +1,15 @@
+# Use Python 3.11 version
+
+with flask
+https://github.com/Russellwzr/image-inpainting-be
+
+
+>>> pip install flask
+>>> pip install -U flask-cors
+>>> pip install opencv-contrib-python
+>>> pip install pydantic==1.8.0
+>>> pip install --upgrade pydantic
+>>> pip install torch
+>>> pip install tqdm
+>>> python -m pip install albumentations
+>>> pip install loguru
