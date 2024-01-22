@@ -1,0 +1,16 @@
+1 - 
+
+place big-lama.pt inside this path 
+
+image-inpainting-be\models\big_lama\weight\big-lama.pt
+
+
+2 - 
+place fpn_inception.h5 inside this path 
+
+image-inpainting-be\models\deblur_gan\weight\
+
+
+download Link 
+
+https://drive.google.com/drive/folders/1WHiz-Y3aKqLzP1h1nByd-5FSzmHq7-6I?usp=sharing
