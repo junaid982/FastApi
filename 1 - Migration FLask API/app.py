@@ -1,16 +1,14 @@
 from flask import Flask , request , jsonify , send_file
-from werkzeug.utils import secure_filename
+
 import os 
 import socket
 import threading  
-
-import asyncio
 
 # Sketch Image
 import numpy as np
 import cv2
 
-# Cartoon Image 
+# # Cartoon Image 
 import torch
 from cartoon_module.model import WhiteBox
 
@@ -19,11 +17,6 @@ from rembg import remove
 
 # text extraction from image
 import easyocr
-
-
-
-from PIL import Image
-import time
 
 
 
@@ -421,7 +414,7 @@ def edge_image():
         file_names = []
         
         if not images:
-            return {"error": "Provided image to convert to oil paint."}, 400
+            return {"error": "Provided image to convert to Edge image."}, 400
         
         if len(images) > 5:
             return {"error": "Upload max 5 images."}, 400
@@ -685,7 +678,7 @@ def extract_text():
             extracted_text[uid] = format_extracted_text
             
             
-        print(extracted_text)
+        # print(extracted_text)
         return jsonify(extracted_text),200
     
     except Exception as e:

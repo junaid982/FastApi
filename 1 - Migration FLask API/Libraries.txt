@@ -8,20 +8,26 @@
 # Sketech Image Libraries
 
 >>> pip install flask
->>> pip install Pillow
->>> pip install numpy
-
-
-# Oil Painting
->>> pip install opencv-contrib-python
-
 
 # Cartoon Image torch support python 3.11
 >>> pip install torch
 
 
 # Remove Background 
->>> pip install rmbg
+>>> pip install rembg
 
 # Extract Text From Image
 >>> pip install easyocr
+
+
+#============== Remove this Library
+>>> pip freeze 
+
+* Find opencv-python-headless==4.9.0.80 this library and remove 
+
+>>> pip uninstall opencv-python-headless==4.9.0.80
+
+#============== 
+
+# Oil Painting
+>>> pip install opencv-contrib-python
