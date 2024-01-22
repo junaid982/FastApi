@@ -1,4 +1,5 @@
-from flask import Flask , request , jsonify , send_file
+from flask import Flask , request , jsonify , send_file,Response
+from flask_cors import CORS
 
 import os 
 import socket
@@ -18,9 +19,13 @@ from rembg import remove
 # text extraction from image
 import easyocr
 
+# Image Inpainting 
+from serve.worker.deblur_worker import DeBlurWorker
+from serve.worker.lama_worker import LaMaWorker
 
 
 app  = Flask(__name__)
+CORS(app, supports_credentials=True)
 
 hostname = socket.gethostname()
 IPAddr = socket.gethostbyname(hostname)
@@ -318,7 +323,7 @@ def cartoon_image():
         file_names = []
 
         if not images:
-            return {"error": "Provided image to convert to oil paint."}, 400
+            return {"error": "Provided image to convert cartoon ."}, 400
         
         for image in images:
             # getting file name and store into a list 
@@ -495,7 +500,7 @@ def effects_maker():
         file_names = []
         
         if not images:
-            return {"error": "Provided image to convert to oil paint."}, 400
+            return {"error": "Provided image to convert to Effects."}, 400
         
         if len(images) > 5:
             return {"error": "Upload max 5 images."}, 400
@@ -588,7 +593,7 @@ def remove_background():
         file_names = []
         
         if not images:
-            return {"error": "Provided image to convert to oil paint."}, 400
+            return {"error": "Provided image to remove background."}, 400
         
         if len(images) > 5:
                 return {"error": "Upload max 5 images."}, 400
@@ -659,7 +664,7 @@ def extract_text():
         file_names = []
         
         if not images:
-            return {"error": "Provided image to convert to oil paint."}, 400
+            return {"error": "Provided image to Extract text."}, 400
             
         if len(images) > 5:
             return {"error": "Upload max 5 images."}, 400
@@ -685,6 +690,36 @@ def extract_text():
         return jsonify({"error":str(e)}),500
 
 # ================ 7 -  Extract Text From Program End Here  =================
+    
+
+# ================ 8 -  Image Inpainting Program Start from Here  =================
+    
+lama_worker = LaMaWorker()
+deblur_worker = DeBlurWorker()
+
+
+@app.route('/api/effects/image/inpaint', methods=['POST'])
+def inpaint():
+    if request.method == 'POST':
+        
+        ## Working Program 
+        files = request.files
+        input_image = files['input_image'].read()
+        input_mask = files['mask_image'].read()
+        inpaint_image = lama_worker.process(input_image, input_mask)
+        
+        return Response(inpaint_image[0], mimetype="image/jpeg")
+        
+
+@app.route('/api/effects/image/inpaint/deblur', methods=['POST'])
+def deblur():
+    if request.method == 'POST':
+        file = request.files['origin']
+        input_image = file.read()
+        deblur_image = deblur_worker.process(input_image)
+        return Response(deblur_image, mimetype="image/jpeg")
+
+# ================ 8 -  Image Inpainting Program End Here  =================
 
 
 

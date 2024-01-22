@@ -20,6 +20,15 @@
 >>> pip install easyocr
 
 
+# Image Inpainting 
+>>> pip install -U flask-cors
+>>> pip install pydantic
+>>> pip install tqdm
+>>> python -m pip install albumentations
+>>> pip install loguru
+
+
+
 #============== Remove this Library
 >>> pip freeze 
 
